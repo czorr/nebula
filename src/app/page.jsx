@@ -11,10 +11,12 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import TeamSelectionModal from "@/components/modals/TeamSelection";
 import MapSelectionModal from "@/components/modals/MapSelection";
 import { resetMap } from "@/app/redux/features/maps";
+import { addMessage, setLoading, setError } from './redux/features/chat.js';
+import { Loader2 } from "lucide-react";
+import { marked } from 'marked';
 
 function StratsContent() {
   const dispatch = useDispatch();
-  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [agents, setAgents] = useState([]);
   const [isTeamModalOpen, setIsTeamModalOpen] = useState(true);
@@ -23,6 +25,8 @@ function StratsContent() {
   const [maps, setMaps] = useState([]);
   const [isLoadingMaps, setIsLoadingMaps] = useState(true);
   const { map } = useSelector((state) => state.maps);
+  const chatMessages = useSelector(state => state.chat.messages);
+  const isLoadingChat = useSelector(state => state.chat.isLoading);
   
   // Fetch agents
   useEffect(() => {
@@ -60,16 +64,55 @@ function StratsContent() {
       content: input,
     };
 
-    setMessages((prev) => [...prev, newMessage]);
+    dispatch(addMessage(newMessage));
+    dispatch(setLoading(true));
     setInput("");
 
-    const response = await fetch("/api/strats/evaluate", {
-      method: "POST",
-      body: JSON.stringify({ prompt: input }),
-    });
-    const data = await response.json();
+    try {
+      const response = await fetch("/api/strat/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          prompt: input,
+          attackers,
+          defenders,
+          selectedMap: map,
+          messageHistory: chatMessages,
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to get response from AI');
+      }
+      
+      const data = await response.json();
+      
+      // Add the AI response to messages
+      dispatch(addMessage(data.message));
+      
+      // If there were tool calls, add them as messages to show the AI's thought process
+      if (data.toolCalls) {
+        data.toolCalls.forEach(tool => {
+          dispatch(addMessage({
+            role: "assistant",
+            content: `Used ${tool.name} with parameters: ${JSON.stringify(tool.arguments)}`,
+            function_call: tool.function_call,
+          }));
+        });
+      }
 
-    setMessages((prev) => [...prev, data.message]);
+    } catch (error) {
+      console.error("Error sending message:", error);
+      dispatch(setError(error.message));
+      dispatch(addMessage({
+        role: "assistant",
+        content: "Sorry, there was an error processing your request. Please try again.",
+      }));
+    } finally {
+      dispatch(setLoading(false));
+    }
   };
 
   return (
@@ -88,11 +131,11 @@ function StratsContent() {
       />
 
       <main className="flex flex-col items-center justify-center min-h-screen">
-        <div className="container mx-auto p-4 gap-4 flex flex-col">
+        <div className="p-4 gap-4 flex flex-col max-w-[90vw] mx-auto w-full">
 
           {/* Map Selection Topbar */}
           <Card 
-            className="flex justify-between items-center p-6 w-full border border-gray-200 rounded-lg relative overflow-hidden"
+            className="flex justify-between items-center p-6 w-full border border-gray-200 relative overflow-hidden"
             style={{
               backgroundImage: map ? `url(${map.listViewIcon})` : 'none',
               backgroundSize: 'cover',
@@ -124,10 +167,10 @@ function StratsContent() {
             )}
           </Card>
 
-          <div className="grid grid-cols-[350px_1fr_350px] gap-4">
+          <div className="flex w-full gap-4">
 
             {/* Left Sidebar - Attacker Team */}
-            <Card className="h-[600px]">
+            <Card className="h-[700px] w-[350px] shrink-0">
               <div className="border-b flex justify-between items-center px-6 py-4 pr-4">
                 <CardHeader>
                   <CardTitle>Attacker Team</CardTitle>
@@ -137,7 +180,7 @@ function StratsContent() {
                 </Button>
               </div>
               <CardContent>
-                <ScrollArea className="h-[500px]">
+                <ScrollArea className="p-4 h-[500px] overflow-y-auto">
                   <div className="flex flex-col gap-2">
                     {attackers.map((agent) => (
                       <div key={agent.uuid} className="flex items-center gap-2 p-2 rounded-lg border border-gray-200" style={{ background: `${agent.backgroundGradientColors ? `linear-gradient(to right, ${agent.backgroundGradientColors[0]}, ${agent.backgroundGradientColors[1]})` : 'none'}` }}>
@@ -159,46 +202,61 @@ function StratsContent() {
             </Card>
 
             {/* Main Chat Area */}
-            <Card className="h-[600px] flex flex-col">
-              <div className="p-4 border-b">
-                <h2 className="text-2xl font-bold">Valorant Strategy Planner</h2>
-                <p className="text-sm text-muted-foreground">
-                  Chat with AI to create your perfect strategy
-                </p>
-              </div>
+            <Card className="h-[700px] w-full">
               
-              <ScrollArea className="flex-1 p-4">
+              <ScrollArea className="p-4 h-[650px] overflow-y-auto">
                 <div className="space-y-4">
-                  {messages.map((message, i) => (
+
+                  {chatMessages.map((message, i) => (
                     <div
                       key={i}
-                      className={`flex items-start gap-3 ${
-                        message.role === "user" ? "justify-end" : "justify-start"
+                      className={`flex flex-col ${
+                        message.role === "user" ? "items-end" : "items-start"
                       }`}
                     >
-                      {message.role === "assistant" && (
-                        <Avatar>
-                          <AvatarFallback>AI</AvatarFallback>
-                          <AvatarImage src="/bot-avatar.png" />
-                        </Avatar>
-                      )}
+
+                      {/* Message container */}
                       <div
-                        className={`rounded-lg p-3 max-w-[80%] ${
+                        className={`p-3 rounded-lg max-w-[80%] ${
                           message.role === "user"
                             ? "bg-primary text-primary-foreground"
-                            : "bg-muted"
+                            : message.role === "error"
+                            ? "bg-destructive text-destructive-foreground"
+                            : message.role === "tool_call"
+                            ? "bg-muted text-muted-foreground text-xs italic"
+                            : "bg-muted text-muted-foreground"
                         }`}
                       >
-                        {message.content}
+
+                        {/* Message content */}
+                        {!message.function_call && (
+                          <div className={`${message.role === "user" ? "prose-invert" : "prose"}`}>
+                            {message.content}
+                          </div>
+                        )}
+
+                        {/* Function call */}
+                        {message.function_call && (
+                          <div className="mt-2 text-xs bg-background text-background-foreground p-2 rounded">
+                            <p>Function: {message.function_call.name}</p>
+                            <pre className="whitespace-pre-wrap">
+                              {JSON.stringify(message.function_call.arguments, null, 2)}
+                            </pre>
+                          </div>
+                        )}
+
                       </div>
-                      {message.role === "user" && (
-                        <Avatar>
-                          <AvatarFallback>ME</AvatarFallback>
-                          <AvatarImage src="/user-avatar.png" />
-                        </Avatar>
-                      )}
                     </div>
                   ))}
+
+                  {isLoadingChat && (
+                    <div className="flex items-start">
+                      <div className="p-3 rounded-lg bg-muted text-muted-foreground max-w-[80%]">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      </div>
+                    </div>
+                  )}
+
                 </div>
               </ScrollArea>
 
@@ -214,7 +272,7 @@ function StratsContent() {
             </Card>
 
             {/* Right Sidebar - Defender Team */}
-            <Card className="h-[600px]">
+            <Card className="h-[700px] w-[350px] shrink-0">
               <div className="border-b flex justify-between items-center px-6 py-4 pr-4">
                 <CardHeader>
                   <CardTitle>Defender Team</CardTitle>
@@ -225,7 +283,7 @@ function StratsContent() {
               </div>
 
               <CardContent>
-                <ScrollArea className="h-[500px]">
+                <ScrollArea className="p-4 h-[500px] overflow-y-auto">
                   <div className="flex flex-col gap-2">
                     {defenders.map((agent) => (
                       <div key={agent.uuid} className="flex items-center gap-2 p-2 rounded-lg border border-gray-200">
