@@ -1,87 +1,10 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { getAgentsTool, getMapsTool, suggestPlacementsTool, getCalloutsTool, finishTaskTool } from '@/lib/agents/tools';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
-
-// Tool for getting agents data
-const getAgentsTool = {
-  type: "function",
-  function: {
-    name: "getAgents",
-    description: "Get information about Valorant agents",
-    parameters: {
-      type: "object",
-      properties: {},
-      required: [],
-    },
-  },
-};
-
-// Tool for getting maps data
-const getMapsTool = {
-  type: "function",
-  function: {
-    name: "getMaps",
-    description: "Get information about Valorant maps",
-    parameters: {
-      type: "object",
-      properties: {},
-      required: [],
-    },
-  },
-};
-
-// Tool for getting map callouts
-const getCalloutsTool = {
-  type: "function",
-  function: {
-    name: "getCallouts",
-    description: "Get information about Valorant map callouts",
-    parameters: {
-      type: "object",
-      properties: {
-        mapId: {
-          type: "string",
-          description: "The ID of the map",
-        },
-      },
-      required: ["mapId"],
-    },
-  },
-};
-
-// Tool for suggesting agent placements on a map
-const suggestPlacementsTool = {
-  type: "function",
-  function: {
-    name: "suggestPlacements",
-    description: "Suggest optimal agent placements on a specific map",
-    parameters: {
-      type: "object",
-      properties: {
-        mapName: {
-          type: "string",
-          description: "The name of the map",
-        },
-        agentNames: {
-          type: "array",
-          items: {
-            type: "string"
-          },
-          description: "List of agent names to place",
-        },
-        side: {
-          type: "string",
-          enum: ["attackers", "defenders"],
-          description: "Which side the team is playing on",
-        },
-      },
-      required: ["mapName", "agentNames", "side"],
-    },
-  },
-};
 
 export async function POST(request) {
 
@@ -93,17 +16,17 @@ export async function POST(request) {
     const validRoles = ['system', 'assistant', 'user', 'function', 'tool', 'developer'];
     const filteredMessageHistory = messageHistory.filter(message => validRoles.includes(message.role));
 
-    // Prepare context information based on provided data
+    // Cleaning context
     let contextInfo = '';
-
-    // Map agents info)
-    const mapAgentsInfo = (agents) => {
-      return agents.map(agent => `${agent.displayName} (${agent.role.displayName}): ${agent.description} Abilities: [${agent.abilities.map(ability => `${ability.displayName}: ${ability.description}`).join(', ')}]`).join('\n');
-    }
-
+    
     // Map maps info (display name, description, callouts)
     const mapMapsInfo = (map) => {
       return `${map.displayName}: ${map.description} Callouts: [${map.callouts.map(callout => `${callout.displayName}: ${callout.description}`).join(', ')}]`;
+    }
+
+    // Map agents info (display name, role, description, abilities)
+    const mapAgentsInfo = (agents) => {
+      return agents.map(agent => `${agent.displayName} (${agent.role.displayName}): Abilities: [${agent.abilities.map(ability => `${ability.displayName}: ${ability.description}`).join(', ')}]`).join('\n');
     }
     
     if (selectedMap) {
@@ -149,98 +72,160 @@ export async function POST(request) {
     const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: messages,
-      tools: [getAgentsTool, getMapsTool, suggestPlacementsTool, getCalloutsTool],
+      tools: [getAgentsTool, getMapsTool, suggestPlacementsTool, getCalloutsTool, finishTaskTool],
       tool_choice: "auto",
     });
 
-    // Extract the assistant's message from the response
-    const assistantMessage = response.choices[0].message;
+    // Extract the assistants message from the response
+    let assistantMessage = response.choices[0].message;
 
     // Check if the model wants to use a tool
     if (assistantMessage.tool_calls && assistantMessage.tool_calls.length > 0) {
-      const toolCalls = assistantMessage.tool_calls;
-      const toolResults = [];
+      let currentMessages = [...messages, assistantMessage];
+      let finalAssistantMessage = null;
+      let allToolCalls = [...assistantMessage.tool_calls];
+      
+      // Loop until the model doesn't request any more tools or reaches maximum iterations
+      const MAX_ITERATIONS = parseInt(process.env.MAX_ITERATIONS || 10);
+      let iterations = 0;
+      
+      while (iterations < MAX_ITERATIONS) {
+        iterations++;
+        const toolCalls = assistantMessage.tool_calls;
+        const toolResults = [];
 
-      // Process each tool call
-      for (const toolCall of toolCalls) {
-        const functionName = toolCall.function.name;
-        const functionArgs = JSON.parse(toolCall.function.arguments);
+        // Process each tool call
+        for (const toolCall of toolCalls) {
+          const functionName = toolCall.function.name;
+          const functionArgs = JSON.parse(toolCall.function.arguments);
 
-        if (functionName === "getAgents") {
-          // Fetch agents data
-          const agentsResponse = await fetch(new URL("/api/agents", request.url));
-          const agentsData = await agentsResponse.json();
-          toolResults.push({
-            tool_call_id: toolCall.id,
-            role: "tool",
-            name: "getAgents",
-            content: JSON.stringify(agentsData),
-          });
-        } 
-        else if (functionName === "getMaps") {
-          // Fetch maps data
-          const mapsResponse = await fetch(new URL("/api/maps", request.url));
-          const mapsData = await mapsResponse.json();
-          toolResults.push({
-            tool_call_id: toolCall.id,
-            role: "tool",
-            name: "getMaps",
-            content: JSON.stringify(mapsData),
-          });
-        } 
-        else if (functionName === "suggestPlacements") {
-          // Generate placement suggestions based on map and agents
-          const { mapName, agentNames, side } = functionArgs;
+          if (functionName === "getAgents") {
+            // Fetch agents data
+            const agentsResponse = await fetch(new URL("/api/agents", request.url));
+            const agentsData = await agentsResponse.json();
+            toolResults.push({
+              tool_call_id: toolCall.id,
+              role: "tool",
+              name: "getAgents",
+              content: JSON.stringify(agentsData),
+            });
+          } 
+          else if (functionName === "getMaps") {
+            // Fetch maps data
+            const mapsResponse = await fetch(new URL("/api/maps", request.url));
+            const mapsData = await mapsResponse.json();
+            toolResults.push({
+              tool_call_id: toolCall.id,
+              role: "tool",
+              name: "getMaps",
+              content: JSON.stringify(mapsData),
+            });
+          } 
+          else if (functionName === "suggestPlacements") {
+            // Generate placement suggestions based on map and agents
+            const { mapName, agentNames, side } = functionArgs;
+            
+            // This would typically involve more complex logic
+            // For now, we'll return a simple suggestion
+            const placementSuggestions = {
+              map: mapName,
+              placements: agentNames.map(agent => ({
+                agent,
+                position: `${side === "attackers" ? "Entry" : "Site"} position`,
+                role: "Suggested role based on agent abilities"
+              }))
+            };
+            
+            toolResults.push({
+              tool_call_id: toolCall.id,
+              role: "tool",
+              name: "suggestPlacements",
+              content: JSON.stringify(placementSuggestions),
+            });
+          }
+          else if (functionName === "getCallouts") {
+            // Fetch callouts data
+            const calloutsResponse = await fetch(new URL("/api/callouts", request.url));
+            const calloutsData = await calloutsResponse.json();
+            toolResults.push({
+              tool_call_id: toolCall.id,
+              role: "tool",
+              name: "getCallouts",
+              content: JSON.stringify(calloutsData),
+            });
+          }
+          else if (functionName === "finishTask") {
+            // The model has explicitly decided it's done with tool calls
+            finalAssistantMessage = {
+              role: "assistant",
+              content: functionArgs.finalAnswer || "Task completed successfully."
+            };
+            break;
+          }
           
-          // This would typically involve more complex logic
-          // For now, we'll return a simple suggestion
-          const placementSuggestions = {
-            map: mapName,
-            placements: agentNames.map(agent => ({
-              agent,
-              position: `${side === "attackers" ? "Entry" : "Site"} position`,
-              role: "Suggested role based on agent abilities"
-            }))
-          };
-          
-          toolResults.push({
-            tool_call_id: toolCall.id,
-            role: "tool",
-            name: "suggestPlacements",
-            content: JSON.stringify(placementSuggestions),
-          });
+          // Ya no agregamos mensajes de finalización aquí
+        }
 
+        // If the model explicitly finished, break the loop
+        if (finalAssistantMessage) {
+          break;
         }
-        else if (functionName === "getCallouts") {
-          // Fetch callouts data
-          const calloutsResponse = await fetch(new URL("/api/callouts", request.url));
-          const calloutsData = await calloutsResponse.json();
-          toolResults.push({
-            tool_call_id: toolCall.id,
-            role: "tool",
-            name: "getCallouts",
-            content: JSON.stringify(calloutsData),
-          });
+
+        // Add tool results to the conversation
+        currentMessages = [...currentMessages, ...toolResults];
+
+        // Call model again to see if it needs more tools
+        //! We are using 4o-mini
+        const response = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: currentMessages,
+          tools: [getAgentsTool, getMapsTool, suggestPlacementsTool, getCalloutsTool, finishTaskTool],
+          tool_choice: "auto",
+        });
+
+        // Update assistant message
+        assistantMessage = response.choices[0].message;
+        
+        // If no more tool calls, or if reached max iterations, break the loop
+        if (!assistantMessage.tool_calls || assistantMessage.tool_calls.length === 0) {
+          finalAssistantMessage = assistantMessage;
+          break;
         }
+        
+        // Add this assistant message to the conversation
+        currentMessages.push(assistantMessage);
+        
+        // Track all tool calls for the response
+        allToolCalls = [...allToolCalls, ...assistantMessage.tool_calls];
       }
 
-      // Second call to OpenAI with the tool results
-      const secondResponse = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
-          ...messages,
-          assistantMessage,
-          ...toolResults,
-        ],
-      });
+      // Create final response based on the conversation
+      const finalMessage = finalAssistantMessage || {
+        role: "assistant",
+        content: "I've analyzed your request using the available tools. Here's my strategy..."
+      };
 
-      // Return the final response
+      // Return the final response with all tool calls
       return NextResponse.json({
-        message: secondResponse.choices[0].message,
-        toolCalls: toolCalls.map(tool => ({
-          name: tool.function.name,
-          arguments: JSON.parse(tool.function.arguments),
-        })),
+        message: finalMessage,
+        toolCalls: allToolCalls.map(tool => {
+          // Solo incluir herramientas que fueron usadas antes de la finalización
+          if (tool.function && tool.function.name !== "finishTask") {
+            return {
+              name: tool.function.name,
+              arguments: JSON.parse(tool.function.arguments),
+              phase: "contributing" // Indica que esta herramienta contribuyó a la respuesta
+            };
+          } else if (tool.function && tool.function.name === "finishTask") {
+            return {
+              name: "finishTask",
+              arguments: { finalAnswer: "Task completed with all necessary information" },
+              phase: "final" // Indica que esta es la herramienta final
+            };
+          } else {
+            return null; // Filtrar herramientas nulas después
+          }
+        }).filter(Boolean), // Eliminar valores nulos
       });
     }
 

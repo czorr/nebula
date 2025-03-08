@@ -95,11 +95,33 @@ function StratsContent() {
       // If there were tool calls, add them as messages to show the AI's thought process
       if (data.toolCalls) {
         data.toolCalls.forEach(tool => {
-          dispatch(addMessage({
-            role: "assistant",
-            content: `Used ${tool.name} with parameters: ${JSON.stringify(tool.arguments)}`,
-            function_call: tool.function_call,
-          }));
+          // Solo mostrar herramientas que contribuyeron a la respuesta final o la herramienta final
+          if (tool.phase === "contributing" || tool.phase === "final") {
+            // No mostrar la herramienta finishTask
+            if (tool.name !== "finishTask") {
+              // Primero añadimos un mensaje de inicio (generado localmente)
+              dispatch(addMessage({
+                role: "tool_call",
+                content: `🔍 Using ${tool.name} with parameters: ${JSON.stringify(tool.arguments)}`,
+                tool_info: {
+                  name: tool.name,
+                  arguments: tool.arguments
+                },
+                phase: "start"
+              }));
+              
+              // Luego añadimos un mensaje de finalización (generado localmente)
+              dispatch(addMessage({
+                role: "tool_call",
+                content: `✓ Completed ${tool.name} operation`,
+                tool_info: {
+                  name: tool.name,
+                  arguments: tool.arguments
+                },
+                phase: "end"
+              }));
+            }
+          }
         });
       }
 
@@ -222,6 +244,10 @@ function StratsContent() {
                             ? "bg-primary text-primary-foreground"
                             : message.role === "error"
                             ? "bg-destructive text-destructive-foreground"
+                            : message.role === "tool_call" && message.phase === "start"
+                            ? "bg-blue-100 text-blue-800 text-xs font-mono"
+                            : message.role === "tool_call" && message.phase === "end"
+                            ? "bg-green-100 text-green-800 text-xs font-mono"
                             : message.role === "tool_call"
                             ? "bg-muted text-muted-foreground text-xs italic"
                             : "bg-muted text-muted-foreground"
@@ -242,6 +268,18 @@ function StratsContent() {
                             <pre className="whitespace-pre-wrap">
                               {JSON.stringify(message.function_call.arguments, null, 2)}
                             </pre>
+                          </div>
+                        )}
+
+                        {/* Tool info */}
+                        {message.tool_info && (
+                          <div className="mt-2 text-xs bg-background text-background-foreground p-2 rounded">
+                            <p>Tool: {message.tool_info.name}</p>
+                            {message.phase === "start" && (
+                              <pre className="whitespace-pre-wrap">
+                                {JSON.stringify(message.tool_info.arguments, null, 2)}
+                              </pre>
+                            )}
                           </div>
                         )}
 
