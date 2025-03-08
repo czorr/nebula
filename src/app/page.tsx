@@ -25,9 +25,9 @@ export default function Home() {
   }
 
   return (
-    <div className="flex h-screen flex-col items-center p-4">
-      <Card className="flex h-[600px] w-full max-w-2xl flex-col">
-        <ScrollArea className="flex-1 p-4">
+    <div className="flex h-screen flex-col items-center justify-center p-4">
+      <Card className="flex h-[600px] w-full max-w-4xl flex-col rounded-2xl">
+        <ScrollArea className="flex-1 p-4 overflow-y-auto">
           <div className="space-y-4">
             {messages.map((message, index) => (
               <div
@@ -49,6 +49,7 @@ export default function Home() {
             ))}
           </div>
         </ScrollArea>
+        
         <form onSubmit={handleSubmit} className="flex gap-2 p-4 border-t">
           <Input
             value={input}
