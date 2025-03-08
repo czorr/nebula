@@ -11,6 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import TeamSelectionModal from "@/components/modals/TeamSelection";
 import MapSelectionModal from "@/components/modals/MapSelection";
 import { resetMap } from "@/app/redux/features/maps";
+
 function StratsContent() {
   const dispatch = useDispatch();
   const [messages, setMessages] = useState([]);
@@ -87,7 +88,7 @@ function StratsContent() {
       />
 
       <main className="flex flex-col items-center justify-center min-h-screen">
-        <div className="container mx-auto p-4 max-w-7xl gap-4 flex flex-col">
+        <div className="container mx-auto p-4 gap-4 flex flex-col">
 
           {/* Map Selection Topbar */}
           <Card 
@@ -116,28 +117,40 @@ function StratsContent() {
                 <span className="text-sm font-semibold text-white drop-shadow-md">{map.displayName}</span>
               )}
             </div>
-            {/* Add a dark overlay when map is selected */}
+
+            {/* Dark overlay */}
             {map && (
               <div className="absolute inset-0 bg-black/30 z-0" />
             )}
           </Card>
 
-          <div className="grid grid-cols-[250px_1fr_250px] gap-4">
+          <div className="grid grid-cols-[350px_1fr_350px] gap-4">
+
             {/* Left Sidebar - Attacker Team */}
             <Card className="h-[600px]">
-              <CardHeader>
-                <CardTitle>Attacker Team</CardTitle>
-              </CardHeader>
+              <div className="border-b flex justify-between items-center px-6 py-4 pr-4">
+                <CardHeader>
+                  <CardTitle>Attacker Team</CardTitle>
+                </CardHeader>
+                <Button variant="outline" onClick={() => setIsTeamModalOpen(true)}>
+                  Select Team
+                </Button>
+              </div>
               <CardContent>
                 <ScrollArea className="h-[500px]">
                   <div className="flex flex-col gap-2">
                     {attackers.map((agent) => (
-                      <div key={agent.uuid} className="flex items-center gap-2 p-2 rounded-lg border border-gray-200">
+                      <div key={agent.uuid} className="flex items-center gap-2 p-2 rounded-lg border border-gray-200" style={{ background: `${agent.backgroundGradientColors ? `linear-gradient(to right, ${agent.backgroundGradientColors[0]}, ${agent.backgroundGradientColors[1]})` : 'none'}` }}>
                         <Avatar className="h-8 w-8">
                           <AvatarImage src={agent.displayIcon} alt={agent.displayName} />
                           <AvatarFallback>{agent.displayName.charAt(0)}</AvatarFallback>
                         </Avatar>
-                        <span>{agent.displayName}</span>
+                        <div className="flex flex-col">
+                          <span>{agent.displayName}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {agent.role.displayName}
+                          </span>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -202,9 +215,15 @@ function StratsContent() {
 
             {/* Right Sidebar - Defender Team */}
             <Card className="h-[600px]">
-              <CardHeader>
-                <CardTitle>Defender Team</CardTitle>
-              </CardHeader>
+              <div className="border-b flex justify-between items-center px-6 py-4 pr-4">
+                <CardHeader>
+                  <CardTitle>Defender Team</CardTitle>
+                </CardHeader>
+                <Button variant="outline" onClick={() => setIsTeamModalOpen(true)}>
+                  Select Team
+                </Button>
+              </div>
+
               <CardContent>
                 <ScrollArea className="h-[500px]">
                   <div className="flex flex-col gap-2">
@@ -214,13 +233,20 @@ function StratsContent() {
                           <AvatarImage src={agent.displayIcon} alt={agent.displayName} />
                           <AvatarFallback>{agent.displayName.charAt(0)}</AvatarFallback>
                         </Avatar>
-                        <span>{agent.displayName}</span>
+                        <div className="flex flex-col">
+                          <span>{agent.displayName}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {agent?.role?.displayName}
+                          </span>
+                        </div>
                       </div>
                     ))}
                   </div>
                 </ScrollArea>
               </CardContent>
+              
             </Card>
+
           </div>
         </div>
       </main>

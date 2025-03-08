@@ -56,14 +56,17 @@ export default function TeamSelectionModal({ isOpen, onClose, agents }) {
                   <div
                     key={agent.uuid}
                     onClick={() => handleAgentSelection(agent, 'attackers')}
-                    className={`flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-gray-100
+                    className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer hover:bg-gray-200 active:scale-95 transition-all duration-200
                       ${selectedAttackers.find(a => a.uuid === agent.uuid) ? 'bg-primary/20' : ''}`}
                   >
-                    <Avatar>
+                    <Avatar className="rounded-lg border border-gray-200">
                       <AvatarImage src={agent.displayIcon} alt={agent.displayName} />
                       <AvatarFallback>{agent.displayName.substring(0, 2)}</AvatarFallback>
                     </Avatar>
-                    <span>{agent.displayName}</span>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-semibold">{agent.displayName}</span>
+                      <span className="text-xs text-muted-foreground">{agent?.role?.displayName}</span>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -79,14 +82,17 @@ export default function TeamSelectionModal({ isOpen, onClose, agents }) {
                   <div
                     key={agent.uuid}
                     onClick={() => handleAgentSelection(agent, 'defenders')}
-                    className={`flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-gray-100
+                    className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer hover:bg-gray-200 active:scale-95 transition-all duration-200
                       ${selectedDefenders.find(a => a.uuid === agent.uuid) ? 'bg-primary/20' : ''}`}
                   >
-                    <Avatar>
+                    <Avatar className="rounded-lg border border-gray-200">
                       <AvatarImage src={agent.displayIcon} alt={agent.displayName} />
                       <AvatarFallback>{agent.displayName.substring(0, 2)}</AvatarFallback>
                     </Avatar>
-                    <span>{agent.displayName}</span>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-semibold">{agent.displayName}</span>
+                      <span className="text-xs text-muted-foreground">{agent?.role?.displayName}</span>
+                    </div>
                   </div>
                 ))}
               </div>
