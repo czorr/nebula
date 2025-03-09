@@ -166,21 +166,18 @@ function StratsContent() {
         isLoading={isLoadingMaps}
       />
 
-      <main className="flex flex-col items-center justify-center min-h-screen">
+      <main className="flex flex-col items-center justify-center min-h-screen" style={{ backgroundImage: `url(${map ? map.splash : 'none'})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
         <div className="p-4 gap-4 flex flex-col max-w-[90vw] mx-auto w-full">
 
           {/* Map Selection Topbar */}
-          <Card 
-            className="flex justify-between items-center p-6 w-full border border-gray-200 relative overflow-hidden"
-            style={{
-              backgroundImage: map ? `url(${map.splash})` : 'none',
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-            }}
-          >
-            <div className="flex items-center gap-2 relative z-10">
-              <Button 
-                variant="outline" 
+          <Card className="flex justify-between bg-black/30 backdrop-blur-sm items-center p-6 w-full border border-gray-800 relative overflow-hidden">
+            <div className="flex items-center justify-between gap-2 relative z-10 w-full">
+
+              {map && (
+                <span className="text-3xl font-semibold text-white drop-shadow-md">{map.displayName}</span>
+              )}
+
+              <Button variant="outline" className="bg-white/90 hover:bg-white/100" 
                 onClick={() => {
                   if (map) {
                     dispatch(resetMap());
@@ -188,13 +185,10 @@ function StratsContent() {
                     setIsMapModalOpen(true);
                   }
                 }}
-                className="bg-white/90 hover:bg-white/100"
               >
                 {map ? 'Reset' : 'Map Selection'}
               </Button>
-              {map && (
-                <span className="text-sm font-semibold text-white drop-shadow-md">{map.displayName}</span>
-              )}
+
             </div>
 
             {/* Dark overlay */}
