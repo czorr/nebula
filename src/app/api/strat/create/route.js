@@ -1,10 +1,18 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { Langfuse } from "langfuse";
+import { observeOpenAI } from 'langfuse';
 import { getAgentsTool, getMapsTool, suggestPlacementsTool, getCalloutsTool, finishTaskTool } from '@/lib/agents/tools';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+const langfuse = new Langfuse({
+  secretKey: process.env.LANGFUSE_SECRET_KEY,
+  publicKey: process.env.LANGFUSE_PUBLIC_KEY,
+  baseUrl: process.env.LANGFUSE_BASE_URL
 });
+
+const openai = observeOpenAI(new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+}));
 
 export async function POST(request) {
 
@@ -85,11 +93,12 @@ export async function POST(request) {
       let finalAssistantMessage = null;
       let allToolCalls = [...assistantMessage.tool_calls];
       
-      // Loop until the model doesn't request any more tools or reaches maximum iterations
+      //!! AGENT LOOP
       const MAX_ITERATIONS = parseInt(process.env.MAX_ITERATIONS || 10);
       let iterations = 0;
       
       while (iterations < MAX_ITERATIONS) {
+
         iterations++;
         const toolCalls = assistantMessage.tool_calls;
         const toolResults = [];
@@ -174,7 +183,7 @@ export async function POST(request) {
         currentMessages = [...currentMessages, ...toolResults];
 
         // Call model again to see if it needs more tools
-        //! 4o-mini
+        // 4o-mini
         const response = await openai.chat.completions.create({
           model: "gpt-4o-mini",
           messages: currentMessages,
@@ -189,48 +198,50 @@ export async function POST(request) {
         if (!assistantMessage.tool_calls || assistantMessage.tool_calls.length === 0) {
           finalAssistantMessage = assistantMessage;
           break;
+        } else {
+          // Add this assistant message to the conversation
+          currentMessages.push(assistantMessage);
+          
+          // Track all tool calls for the response
+          allToolCalls = [...allToolCalls, ...assistantMessage.tool_calls];
         }
-        
-        // Add this assistant message to the conversation
-        currentMessages.push(assistantMessage);
-        
-        // Track all tool calls for the response
-        allToolCalls = [...allToolCalls, ...assistantMessage.tool_calls];
+
       }
 
+      //! OUT OF LOOP
       // Create final response based on the conversation
       const finalMessage = finalAssistantMessage || {
         role: "assistant",
         content: "I've analyzed your request using the available tools. Here's my strategy..."
       };
 
-      // Return the final response with all tool calls
+      // Return the final response with all tool calls //! (idk if 'NextResponse' is always needed - Ask Heber)
       return NextResponse.json({
         message: finalMessage,
         toolCalls: allToolCalls.map((tool, index) => {
-          // Solo incluir herramientas que fueron usadas antes de la finalización
+          // Only include tools that were used before the finalization
           if (tool.function && tool.function.name !== "finishTask") {
             return {
               name: tool.function.name,
               arguments: JSON.parse(tool.function.arguments),
-              phase: "contributing", // Indica que esta herramienta contribuyó a la respuesta
-              order: index // Añadir índice para mantener el orden
+              phase: "contributing", // Indicates that this tool contributed to the response
+              order: index // Add index to maintain order
             };
           } else if (tool.function && tool.function.name === "finishTask") {
             return {
               name: "finishTask",
               arguments: { finalAnswer: "Task completed with all necessary information" },
-              phase: "final", // Indica que esta es la herramienta final
+              phase: "final", // Indicates that this is the final tool
               order: index
             };
           } else {
-            return null; // Filtrar herramientas nulas después
+            return null; // Filter out null tools after
           }
-        }).filter(Boolean), // Eliminar valores nulos
+        }).filter(Boolean), // Remove null values
       });
     }
 
-    // If no tool was called, return the message
+    // If no tool was called...
     return NextResponse.json({
       message: assistantMessage,
     });
