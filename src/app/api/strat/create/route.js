@@ -1,14 +1,31 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { observeOpenAI } from 'langfuse';
+import { observeOpenAI, Langfuse } from 'langfuse';
 import { getAgentsTool, getMapsTool, suggestPlacementsTool, getCalloutsTool, finishTaskTool } from '@/lib/agents/tools';
 import { getStratPrompt } from '@/lib/agents/prompts';
+import { v4 as uuidv4 } from 'uuid';
 
-const openai = observeOpenAI(new OpenAI({
+// Initialize Langfuse
+const langfuse = new Langfuse({
+  publicKey: process.env.LANGFUSE_PUBLIC_KEY,
+  secretKey: process.env.LANGFUSE_SECRET_KEY,
+  baseUrl: process.env.LANGFUSE_BASEURL
+});
+
+// OpenAI instance
+const openaiClient = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
-}));
+});
 
 export async function POST(request) {
+  
+  // Trace for the entire session
+  const sessionId = uuidv4();
+
+  const trace = langfuse.trace({
+    name: "stratSession",
+    sessionId: sessionId,
+  });
 
   try {
     const body = await request.json();
@@ -57,7 +74,8 @@ export async function POST(request) {
       },
     ];
 
-    // Make the API call to OpenAI
+    const openai = observeOpenAI(openaiClient, { traceId: trace.id });
+
     const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: messages,
@@ -168,8 +186,7 @@ export async function POST(request) {
         // Add tool results to the conv
         currentMessages = [...currentMessages, ...toolResults];
 
-        // Call model again to see if it needs more tools
-        // 4o-mini
+        // Call the model
         const response = await openai.chat.completions.create({
           model: "gpt-4o-mini",
           messages: currentMessages,
@@ -234,6 +251,10 @@ export async function POST(request) {
     
   } catch (error) {
     console.error('Error during OpenAI request:', error);
+
+    // Mark the trace as failed in case of error
+    trace.update({ status: "error", statusMessage: error.message });
+    
     return NextResponse.json(
       { error: 'Failed to process your request' },
       { status: 500 }
