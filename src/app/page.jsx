@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { Provider, useSelector, useDispatch } from "react-redux";
+import { useQuery } from "@tanstack/react-query";
 import store from "@/app/redux/store";
 import { Card } from "@/components/ui/card";
 import TeamSelectionModal from "@/components/modals/TeamSelection";
@@ -9,7 +10,7 @@ import MapSelectionModal from "@/components/modals/MapSelection";
 import { resetMap } from "@/app/redux/features/maps";
 import { addMessage, setLoading, setError } from './redux/features/chat.js';
 
-// Componentes refactorizados
+// Components
 import ChatInput from "@/components/chat/ChatInput";
 import ChatMessages from "@/components/chat/ChatMessages";
 import TeamCard from "@/components/teams/TeamCard";
@@ -18,12 +19,9 @@ import MapSelector from "@/components/maps/MapSelector";
 
 function StratsContent() {
   const dispatch = useDispatch(); 
-  const [agents, setAgents] = useState([]); 
   const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
   const [isMapModalOpen, setIsMapModalOpen] = useState(false);
   const { attackers, defenders } = useSelector((state) => state.teams);
-  const [maps, setMaps] = useState([]);
-  const [isLoadingMaps, setIsLoadingMaps] = useState(true);
   const { map } = useSelector((state) => state.maps);
   const chatMessages = useSelector(state => state.chat.messages);
   const isLoadingChat = useSelector(state => state.chat.isLoading);
@@ -31,32 +29,23 @@ function StratsContent() {
   const [openAttackers, setOpenAttackers] = useState(false);
   const [openDefenders, setOpenDefenders] = useState(false);
 
-  // Fetch agents
-  useEffect(() => {
-    const fetchAgents = async () => {
+  const { data: agents = [], isLoading: isLoadingAgents } = useQuery({
+    queryKey: ["agents"],
+    queryFn: async () => {
       const response = await fetch("/api/agents");
       const data = await response.json();
-      setAgents(data.data);
-    };
-    fetchAgents();
-  }, []);
-
-  // Fetch Maps
-  useEffect(() => {
-    const fetchMaps = async () => {
-      try {
-        setIsLoadingMaps(true);
-        const response = await fetch("/api/maps");
-        const data = await response.json();
-        setMaps(data.data);
-      } catch (error) {
-        console.error("Error fetching maps:", error);
-      } finally {
-        setIsLoadingMaps(false);
-      }
-    };
-    fetchMaps();
-  }, []);
+      return data.data;
+    },
+  });
+  
+  const { data: maps = [], isLoading: isLoadingMaps } = useQuery({
+    queryKey: ["maps"],
+    queryFn: async () => {
+      const response = await fetch("/api/maps");
+      const data = await response.json();
+      return data.data;
+    },
+  });
 
   //! Handle send message
   const handleSendMessage = useCallback(async (inputText) => {
@@ -159,7 +148,7 @@ function StratsContent() {
       <TeamSelectionModal
         isOpen={isTeamModalOpen}
         onClose={() => setIsTeamModalOpen(false)}
-        agents={agents}
+        agents={agents || []}
       />
 
       <MapSelectionModal
@@ -253,6 +242,7 @@ function StratsContent() {
     </>
   );
 }
+
 
 export default function Strats() {
   return (
