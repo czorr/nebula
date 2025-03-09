@@ -28,7 +28,8 @@ function StratsContent() {
   const { map } = useSelector((state) => state.maps); // Selected map
   const chatMessages = useSelector(state => state.chat.messages); // Chat messages
   const isLoadingChat = useSelector(state => state.chat.isLoading); // Loading state for chat
-  
+  const agentStatus = useSelector(state => state.agentStatus.agentStatus); // Agent status
+
   // Fetch agents
   useEffect(() => {
     const fetchAgents = async () => {
@@ -271,6 +272,13 @@ function StratsContent() {
                         {!message.function_call && (
                           <div className={`${message.role === "user" ? "text-white" : "text-black"}`}>
                             <Markdown>{message.content}</Markdown>
+                          </div>
+                        )}
+
+                        {/* Agent Redux toolkit store status */}
+                        {agentStatus && (
+                          <div className="mt-2 text-xs bg-background text-background-foreground p-2 rounded">
+                            <p>{agentStatus}</p>
                           </div>
                         )}
 
