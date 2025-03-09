@@ -76,7 +76,7 @@ export async function POST(request) {
       tool_choice: "auto",
     });
 
-    // Extract the assistants message from the response
+    // Extract the model message
     let assistantMessage = response.choices[0].message;
 
     // Check if the model wants to use a tool
@@ -155,7 +155,7 @@ export async function POST(request) {
             });
           }
           else if (functionName === "finishTask") {
-            // The model has explicitly decided it's done with tool calls
+            // The model has explicitly decided its done
             finalAssistantMessage = {
               role: "assistant",
               content: functionArgs.finalAnswer || "Task completed successfully."
@@ -163,7 +163,6 @@ export async function POST(request) {
             break;
           }
           
-          // Ya no agregamos mensajes de finalización aquí
         }
 
         // If the model explicitly finished, break the loop
@@ -171,11 +170,11 @@ export async function POST(request) {
           break;
         }
 
-        // Add tool results to the conversation
+        // Add tool results to the conv
         currentMessages = [...currentMessages, ...toolResults];
 
         // Call model again to see if it needs more tools
-        //! We are using 4o-mini
+        //! 4o-mini
         const response = await openai.chat.completions.create({
           model: "gpt-4o-mini",
           messages: currentMessages,
@@ -208,19 +207,21 @@ export async function POST(request) {
       // Return the final response with all tool calls
       return NextResponse.json({
         message: finalMessage,
-        toolCalls: allToolCalls.map(tool => {
+        toolCalls: allToolCalls.map((tool, index) => {
           // Solo incluir herramientas que fueron usadas antes de la finalización
           if (tool.function && tool.function.name !== "finishTask") {
             return {
               name: tool.function.name,
               arguments: JSON.parse(tool.function.arguments),
-              phase: "contributing" // Indica que esta herramienta contribuyó a la respuesta
+              phase: "contributing", // Indica que esta herramienta contribuyó a la respuesta
+              order: index // Añadir índice para mantener el orden
             };
           } else if (tool.function && tool.function.name === "finishTask") {
             return {
               name: "finishTask",
               arguments: { finalAnswer: "Task completed with all necessary information" },
-              phase: "final" // Indica que esta es la herramienta final
+              phase: "final", // Indica que esta es la herramienta final
+              order: index
             };
           } else {
             return null; // Filtrar herramientas nulas después
@@ -229,7 +230,7 @@ export async function POST(request) {
       });
     }
 
-    // If no tool was called, return the direct message
+    // If no tool was called, return the message
     return NextResponse.json({
       message: assistantMessage,
     });

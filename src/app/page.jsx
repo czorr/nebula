@@ -13,20 +13,21 @@ import MapSelectionModal from "@/components/modals/MapSelection";
 import { resetMap } from "@/app/redux/features/maps";
 import { addMessage, setLoading, setError } from './redux/features/chat.js';
 import { Loader2 } from "lucide-react";
-import { marked } from 'marked';
+import Markdown from 'react-markdown';
 
 function StratsContent() {
-  const dispatch = useDispatch();
-  const [input, setInput] = useState("");
-  const [agents, setAgents] = useState([]);
-  const [isTeamModalOpen, setIsTeamModalOpen] = useState(true);
-  const [isMapModalOpen, setIsMapModalOpen] = useState(false);
-  const { attackers, defenders } = useSelector((state) => state.teams);
-  const [maps, setMaps] = useState([]);
-  const [isLoadingMaps, setIsLoadingMaps] = useState(true);
-  const { map } = useSelector((state) => state.maps);
-  const chatMessages = useSelector(state => state.chat.messages);
-  const isLoadingChat = useSelector(state => state.chat.isLoading);
+
+  const dispatch = useDispatch(); 
+  const [input, setInput] = useState(""); // Input
+  const [agents, setAgents] = useState([]); // Agents
+  const [isTeamModalOpen, setIsTeamModalOpen] = useState(false); // Team selection modal
+  const [isMapModalOpen, setIsMapModalOpen] = useState(false); // Map selection modal
+  const { attackers, defenders } = useSelector((state) => state.teams); // Attacker and defender teams
+  const [maps, setMaps] = useState([]); // Maps
+  const [isLoadingMaps, setIsLoadingMaps] = useState(true); // Loading state for maps
+  const { map } = useSelector((state) => state.maps); // Selected map
+  const chatMessages = useSelector(state => state.chat.messages); // Chat messages
+  const isLoadingChat = useSelector(state => state.chat.isLoading); // Loading state for chat
   
   // Fetch agents
   useEffect(() => {
@@ -55,6 +56,7 @@ function StratsContent() {
     fetchMaps();
   }, []);
 
+  //! Handle send message
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!input.trim()) return;
@@ -89,18 +91,21 @@ function StratsContent() {
       
       const data = await response.json();
       
-      // Add the AI response to messages
-      dispatch(addMessage(data.message));
+      //* First process the tools
+      const toolMessages = [];
       
-      // If there were tool calls, add them as messages to show the AI's thought process
+      //* If there are tool calls
       if (data.toolCalls) {
-        data.toolCalls.forEach(tool => {
-          // Solo mostrar herramientas que contribuyeron a la respuesta final o la herramienta final
+        // Sort tools by their index
+        const sortedTools = [...data.toolCalls].sort((a, b) => a.order - b.order);
+        
+        sortedTools.forEach(tool => {
+          // Only show relevant tools (ignore the finishTask tool)
           if (tool.phase === "contributing" || tool.phase === "final") {
-            // No mostrar la herramienta finishTask
+
+            //! Can be removed after the repo demo to Seals (just showing the start phase for demo purposes)
             if (tool.name !== "finishTask") {
-              // Primero añadimos un mensaje de inicio (generado localmente)
-              dispatch(addMessage({
+              toolMessages.push({
                 role: "tool_call",
                 content: `🔍 Using ${tool.name} with parameters: ${JSON.stringify(tool.arguments)}`,
                 tool_info: {
@@ -108,10 +113,10 @@ function StratsContent() {
                   arguments: tool.arguments
                 },
                 phase: "start"
-              }));
+              });
               
-              // Luego añadimos un mensaje de finalización (generado localmente)
-              dispatch(addMessage({
+              // Add the end phase of the tool call
+              toolMessages.push({
                 role: "tool_call",
                 content: `✓ Completed ${tool.name} operation`,
                 tool_info: {
@@ -119,11 +124,19 @@ function StratsContent() {
                   arguments: tool.arguments
                 },
                 phase: "end"
-              }));
+              });
             }
           }
         });
       }
+      
+      // Add the tool messages to the chat
+      toolMessages.forEach(msg => {
+        dispatch(addMessage(msg));
+      });
+      
+      // Finally add the model response
+      dispatch(addMessage(data.message));
 
     } catch (error) {
       console.error("Error sending message:", error);
@@ -202,7 +215,7 @@ function StratsContent() {
                 </Button>
               </div>
               <CardContent>
-                <ScrollArea className="p-4 h-[500px] overflow-y-auto">
+                <ScrollArea className="h-[500px] overflow-y-auto">
                   <div className="flex flex-col gap-2">
                     {attackers.map((agent) => (
                       <div key={agent.uuid} className="flex items-center gap-2 p-2 rounded-lg border border-gray-200" style={{ background: `${agent.backgroundGradientColors ? `linear-gradient(to right, ${agent.backgroundGradientColors[0]}, ${agent.backgroundGradientColors[1]})` : 'none'}` }}>
@@ -256,8 +269,8 @@ function StratsContent() {
 
                         {/* Message content */}
                         {!message.function_call && (
-                          <div className={`${message.role === "user" ? "prose-invert" : "prose"}`}>
-                            {message.content}
+                          <div className={`${message.role === "user" ? "text-white" : "text-black"}`}>
+                            <Markdown>{message.content}</Markdown>
                           </div>
                         )}
 
@@ -321,7 +334,7 @@ function StratsContent() {
               </div>
 
               <CardContent>
-                <ScrollArea className="p-4 h-[500px] overflow-y-auto">
+                <ScrollArea className="h-[500px] overflow-y-auto">
                   <div className="flex flex-col gap-2">
                     {defenders.map((agent) => (
                       <div key={agent.uuid} className="flex items-center gap-2 p-2 rounded-lg border border-gray-200">
