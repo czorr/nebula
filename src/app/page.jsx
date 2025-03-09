@@ -173,7 +173,7 @@ function StratsContent() {
           <Card 
             className="flex justify-between items-center p-6 w-full border border-gray-200 relative overflow-hidden"
             style={{
-              backgroundImage: map ? `url(${map.listViewIcon})` : 'none',
+              backgroundImage: map ? `url(${map.splash})` : 'none',
               backgroundSize: 'cover',
               backgroundPosition: 'center',
             }}

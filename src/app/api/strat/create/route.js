@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { observeOpenAI, Langfuse } from 'langfuse';
-import { getAgentsTool, getMapsTool, suggestPlacementsTool, getCalloutsTool, finishTaskTool } from '@/lib/agents/tools';
+import { getAgentsTool, suggestPlacementsTool, getCalloutsTool, finishTaskTool } from '@/lib/agents/tools';
 import { getStratPrompt } from '@/lib/agents/prompts';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -18,7 +18,7 @@ const openaiClient = new OpenAI({
 });
 
 export async function POST(request) {
-  
+
   // Trace for the entire session
   const sessionId = uuidv4();
 
@@ -40,7 +40,7 @@ export async function POST(request) {
     
     // Map maps info (display name, description, callouts)
     const mapMapsInfo = (map) => {
-      return `${map.displayName}: ${map.description} Callouts: [${map.callouts.map(callout => `${callout.displayName}: ${callout.description}`).join(', ')}]`;
+      return `${map.displayName}: ${map.tacticalDescription} Callouts: [${map.callouts.map(callout => `${callout.regionName}: ${callout.superRegionName} [Location: ${callout.location}]`).join(', ')}]`;
     }
 
     // Map agents info (display name, role, description, abilities)
@@ -79,7 +79,7 @@ export async function POST(request) {
     const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: messages,
-      tools: [getAgentsTool, getMapsTool, suggestPlacementsTool, getCalloutsTool, finishTaskTool],
+      tools: [getAgentsTool, suggestPlacementsTool, getCalloutsTool, finishTaskTool],
       tool_choice: "auto",
     });
 
@@ -190,7 +190,7 @@ export async function POST(request) {
         const response = await openai.chat.completions.create({
           model: "gpt-4o-mini",
           messages: currentMessages,
-          tools: [getAgentsTool, getMapsTool, suggestPlacementsTool, getCalloutsTool, finishTaskTool],
+          tools: [getAgentsTool, suggestPlacementsTool, getCalloutsTool, finishTaskTool],
           tool_choice: "auto",
         });
 
