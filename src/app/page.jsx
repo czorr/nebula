@@ -15,7 +15,7 @@ import { resetMap } from "@/app/redux/features/maps";
 import { addMessage, setLoading, setError } from './redux/features/chat.js';
 import { Loader2, ChevronRight, ChevronLeft, Users } from "lucide-react";
 import Markdown from 'react-markdown';
-
+import Image from "next/image";
 function StratsContent() {
 
   const dispatch = useDispatch(); 
@@ -178,16 +178,16 @@ function StratsContent() {
           transition: 'background-image 0.5s ease-in-out'
         }}
       >
-        <div className="p-2 sm:p-4 gap-2 sm:gap-4 flex flex-col w-full max-w-7xl mx-auto">
+        <div className="p-2 sm:p-4 gap-2 sm:gap-4 flex flex-col w-full max-w-[80vw] mx-auto">
 
           {/* Map Selection Topbar */}
           <Card className="flex justify-between bg-black/50 backdrop-blur-md items-center p-3 sm:p-6 w-full border border-gray-800 relative overflow-hidden shadow-lg transition-all duration-300 hover:shadow-xl">
             <div className="flex items-center justify-between gap-2 relative z-10 w-full">
 
               {map ? (
-                <span className="text-xl sm:text-2xl md:text-3xl font-semibold text-white drop-shadow-md transition-all duration-300">{map.displayName}</span>
+                <span className="text-xl sm:text-2xl font-semibold text-white drop-shadow-md transition-all duration-300">{map.displayName}</span>
               ) : (
-                <span className="text-xl sm:text-2xl md:text-3xl font-semibold text-white drop-shadow-md">Select a Map</span>
+                <span className="text-xl sm:text-2xl font-semibold text-white drop-shadow-md">Select a Map</span>
               )}
 
               <Button variant="outline" className="bg-white/90 hover:bg-white/100 text-xs sm:text-sm shadow-md transition-all duration-200 hover:shadow-lg" 
@@ -210,6 +210,7 @@ function StratsContent() {
             )}
           </Card>
 
+          {/* Main Content */}
           <div className="flex flex-col lg:flex-row w-full gap-2 sm:gap-4">
 
             {/* MOBILE: Left Sidebar - Attacker Team */}
@@ -266,7 +267,7 @@ function StratsContent() {
             </div>
 
             {/* DESKTOP: Left Sidebar - Attacker Team */}
-            <Card className="hidden lg:block lg:max-w-[250px] xl:max-w-[300px] lg:shrink-0 bg-black/40 backdrop-blur-md border border-gray-800 shadow-lg transition-all duration-300 hover:shadow-xl">
+            <Card className="hidden lg:block lg:max-w-[250px] xl:max-w-[300px] w-full lg:shrink-0 bg-black/40 backdrop-blur-md border border-gray-800 shadow-lg transition-all duration-300 hover:shadow-xl">
               <div className="border-b border-gray-700 flex justify-between items-center px-3 sm:px-6 py-3 sm:py-4 pr-2 sm:pr-4">
                 <CardHeader className="p-0 sm:p-1">
                   <CardTitle className="text-base sm:text-lg text-white">Attacker Team</CardTitle>
@@ -315,13 +316,15 @@ function StratsContent() {
 
                   {chatMessages.length === 0 && !isLoadingChat && (
                     <div className="flex items-center justify-center h-full py-10">
-                      <div className="text-center text-white/70 p-8">
+                      <div className="flex flex-col gap-2 h-full items-center justify-center text-center text-white/70 p-8">
+                        <img src="https://media1.giphy.com/media/HuIiWZekURnZzBMAXK/source.gif" alt="Valorant Jett sticker thinking about strategy" width={200} height={200} />
                         <h3 className="text-lg font-semibold mb-2">Ready for your strategy</h3>
                         <p className="text-sm max-w-md">Select your team composition and map, then ask for strategy advice below.</p>
                       </div>
                     </div>
                   )}
 
+                  {/* Chat messages (including tool calls) */}
                   {chatMessages.map((message, i) => (
                     <div
                       key={i}
@@ -332,36 +335,36 @@ function StratsContent() {
 
                       {/* Message container */}
                       <div
-                        className={`p-2 sm:p-3 rounded-lg max-w-[95%] sm:max-w-[85%] md:max-w-[75%] text-sm animate-fadeIn ${
+                        className={`p-2 sm:p-4 rounded-lg max-w-[95%] sm:max-w-[85%] md:max-w-[75%] text-sm animate-fadeIn ${
                           message.role === "user"
                             ? "bg-primary text-primary-foreground"
                             : message.role === "error"
                             ? "bg-destructive text-destructive-foreground"
                             : message.role === "tool_call" && message.phase === "start"
-                            ? "bg-blue-100 text-blue-800 text-xs font-mono"
+                            ? "bg-blue-300 text-blue-800 text-xs font-mono"
                             : message.role === "tool_call" && message.phase === "end"
-                            ? "bg-green-100 text-green-800 text-xs font-mono"
+                            ? "bg-green-300 text-green-800 text-xs font-mono"
                             : message.role === "tool_call"
                             ? "bg-muted text-muted-foreground text-xs italic"
-                            : "bg-white/90 text-gray-900"
+                            : "bg-primary"
                         }`}
                       >
 
                         {/* Message content */}
-                        {!message.function_call && (
-                          <div className="text-sm">
+                        {!message.function_call && !message.tool_info && (
+                          <div className="text-sm prose prose-sm prose-invert">
                             <Markdown>{message.content}</Markdown>
                           </div>
                         )}
 
-                        {/* Agent Redux toolkit store status */}
+                        {/* Agent Redux toolkit store status [TODO - AFTER DEMO W/HEBER] */}
                         {agentStatus && (
                           <div className="mt-2 text-xs bg-background text-background-foreground p-2 rounded">
                             <p>{agentStatus}</p>
                           </div>
                         )}
 
-                        {/* Function call */}
+                        {/* Function call [DEPRECATED - TO BE REMOVED] */}
                         {message.function_call && (
                           <div className="mt-2 text-xs bg-background text-background-foreground p-2 rounded">
                             <p>Function: {message.function_call.name}</p>
@@ -371,9 +374,16 @@ function StratsContent() {
                           </div>
                         )}
 
-                        {/* Tool info */}
+                        {/* Message Tool Info */}
                         {message.tool_info && (
-                          <div className="mt-2 text-xs bg-background text-background-foreground p-2 rounded">
+                          <div className="text-xs">
+                            <Markdown>{message.content}</Markdown>
+                          </div>
+                        )}
+
+                        {/* PRE - Tool info */}
+                        {message.tool_info && (
+                          <div className="mt-2 text-xs bg-black/50 text-white p-2 rounded-md">
                             <p>Tool: {message.tool_info.name}</p>
                             {message.phase === "start" && (
                               <pre className="whitespace-pre-wrap overflow-x-auto text-xs">
@@ -471,7 +481,7 @@ function StratsContent() {
             </div>
 
             {/* DESKTOP: Right Sidebar - Defender Team */}
-            <Card className="hidden lg:block lg:max-w-[250px] xl:max-w-[300px] lg:shrink-0 bg-black/40 backdrop-blur-md border border-gray-800 shadow-lg transition-all duration-300 hover:shadow-xl">
+            <Card className="hidden lg:block lg:max-w-[250px] xl:max-w-[300px] w-full lg:shrink-0 bg-black/40 backdrop-blur-md border border-gray-800 shadow-lg transition-all duration-300 hover:shadow-xl">
               <div className="border-b border-gray-700 flex justify-between items-center px-3 sm:px-6 py-3 sm:py-4 pr-2 sm:pr-4">
                 <CardHeader className="p-0 sm:p-1">
                   <CardTitle className="text-base sm:text-lg text-white">Defender Team</CardTitle>
