@@ -8,11 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import TeamSelectionModal from "@/components/modals/TeamSelection";
 import MapSelectionModal from "@/components/modals/MapSelection";
 import { resetMap } from "@/app/redux/features/maps";
 import { addMessage, setLoading, setError } from './redux/features/chat.js';
-import { Loader2 } from "lucide-react";
+import { Loader2, ChevronRight, ChevronLeft, Users } from "lucide-react";
 import Markdown from 'react-markdown';
 
 function StratsContent() {
@@ -29,6 +30,8 @@ function StratsContent() {
   const chatMessages = useSelector(state => state.chat.messages); // Chat messages
   const isLoadingChat = useSelector(state => state.chat.isLoading); // Loading state for chat
   const agentStatus = useSelector(state => state.agentStatus.agentStatus); // Agent status
+  const [openAttackers, setOpenAttackers] = useState(false);
+  const [openDefenders, setOpenDefenders] = useState(false);
 
   // Fetch agents
   useEffect(() => {
@@ -166,18 +169,28 @@ function StratsContent() {
         isLoading={isLoadingMaps}
       />
 
-      <main className="flex flex-col items-center justify-center min-h-screen" style={{ backgroundImage: `url(${map ? map.splash : 'none'})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
-        <div className="p-4 gap-4 flex flex-col max-w-[90vw] mx-auto w-full">
+      <main 
+        className="flex flex-col items-center justify-center min-h-screen w-full bg-black/80 bg-blend-overlay bg-gradient-to-b from-black/10 to-black/70" 
+        style={{ 
+          backgroundImage: `url(${map ? map.splash : 'none'})`, 
+          backgroundSize: 'cover', 
+          backgroundPosition: 'center',
+          transition: 'background-image 0.5s ease-in-out'
+        }}
+      >
+        <div className="p-2 sm:p-4 gap-2 sm:gap-4 flex flex-col w-full max-w-7xl mx-auto">
 
           {/* Map Selection Topbar */}
-          <Card className="flex justify-between bg-black/30 backdrop-blur-sm items-center p-6 w-full border border-gray-800 relative overflow-hidden">
+          <Card className="flex justify-between bg-black/50 backdrop-blur-md items-center p-3 sm:p-6 w-full border border-gray-800 relative overflow-hidden shadow-lg transition-all duration-300 hover:shadow-xl">
             <div className="flex items-center justify-between gap-2 relative z-10 w-full">
 
-              {map && (
-                <span className="text-3xl font-semibold text-white drop-shadow-md">{map.displayName}</span>
+              {map ? (
+                <span className="text-xl sm:text-2xl md:text-3xl font-semibold text-white drop-shadow-md transition-all duration-300">{map.displayName}</span>
+              ) : (
+                <span className="text-xl sm:text-2xl md:text-3xl font-semibold text-white drop-shadow-md">Select a Map</span>
               )}
 
-              <Button variant="outline" className="bg-white/90 hover:bg-white/100" 
+              <Button variant="outline" className="bg-white/90 hover:bg-white/100 text-xs sm:text-sm shadow-md transition-all duration-200 hover:shadow-lg" 
                 onClick={() => {
                   if (map) {
                     dispatch(resetMap());
@@ -193,49 +206,121 @@ function StratsContent() {
 
             {/* Dark overlay */}
             {map && (
-              <div className="absolute inset-0 bg-black/30 z-0" />
+              <div className="absolute inset-0 bg-black/40 z-0" />
             )}
           </Card>
 
-          <div className="flex w-full gap-4">
+          <div className="flex flex-col lg:flex-row w-full gap-2 sm:gap-4">
 
-            {/* Left Sidebar - Attacker Team */}
-            <Card className="h-[700px] w-[350px] shrink-0">
-              <div className="border-b flex justify-between items-center px-6 py-4 pr-4">
-                <CardHeader>
-                  <CardTitle>Attacker Team</CardTitle>
+            {/* MOBILE: Left Sidebar - Attacker Team */}
+            <div className="lg:hidden">
+              <Sheet open={openAttackers} onOpenChange={setOpenAttackers}>
+                <SheetTrigger asChild>
+                  <Button variant="outline" className="w-full bg-black/50 backdrop-blur-md border border-gray-700 text-white">
+                    <Users className="mr-2 h-4 w-4" />
+                    Attackers ({attackers.length}/5)
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="bg-black/90 backdrop-blur-md border-gray-800 text-white">
+                  <SheetHeader>
+                    <SheetTitle className="text-white">Attacker Team</SheetTitle>
+                  </SheetHeader>
+                  <div className="py-4">
+                    <Button size="sm" variant="outline" onClick={() => {
+                      setIsTeamModalOpen(true);
+                      setOpenAttackers(false);
+                    }} className="bg-white/10 text-white hover:bg-white/20 border-gray-600 mb-4">
+                      Select Team
+                    </Button>
+                    <ScrollArea className="h-[70vh]">
+                      <div className="flex flex-col gap-2">
+                        {attackers.length === 0 ? (
+                          <div className="text-center py-6 text-white/70 italic">No agents selected</div>
+                        ) : (
+                          attackers.map((agent) => (
+                            <div 
+                              key={agent.uuid} 
+                              className="flex items-center gap-2 p-2 rounded-lg border border-gray-700 bg-black/30 transition-all duration-200 hover:bg-black/50" 
+                              style={{ 
+                                background: `linear-gradient(to right, rgba(0,0,0,0.7), rgba(0,0,0,0.4)), ${agent.backgroundGradientColors ? `linear-gradient(to right, ${agent.backgroundGradientColors[0]}40, ${agent.backgroundGradientColors[1]}40)` : 'none'}` 
+                              }}
+                            >
+                              <Avatar className="h-8 w-8 border border-gray-600">
+                                <AvatarImage src={agent.displayIcon} alt={agent.displayName} />
+                                <AvatarFallback>{agent.displayName.charAt(0)}</AvatarFallback>
+                              </Avatar>
+                              <div className="flex flex-col">
+                                <span className="text-sm text-white">{agent.displayName}</span>
+                                <span className="text-xs text-white/70">
+                                  {agent.role.displayName}
+                                </span>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </div>
+                </SheetContent>
+              </Sheet>
+            </div>
+
+            {/* DESKTOP: Left Sidebar - Attacker Team */}
+            <Card className="hidden lg:block lg:max-w-[250px] xl:max-w-[300px] lg:shrink-0 bg-black/40 backdrop-blur-md border border-gray-800 shadow-lg transition-all duration-300 hover:shadow-xl">
+              <div className="border-b border-gray-700 flex justify-between items-center px-3 sm:px-6 py-3 sm:py-4 pr-2 sm:pr-4">
+                <CardHeader className="p-0 sm:p-1">
+                  <CardTitle className="text-base sm:text-lg text-white">Attacker Team</CardTitle>
                 </CardHeader>
-                <Button variant="outline" onClick={() => setIsTeamModalOpen(true)}>
-                  Select Team
+                <Button size="sm" variant="outline" onClick={() => setIsTeamModalOpen(true)} className="bg-white/10 text-white hover:bg-white/20 border-gray-600">
+                  Select
                 </Button>
               </div>
-              <CardContent>
-                <ScrollArea className="h-[500px] overflow-y-auto">
+              <CardContent className="p-2 sm:p-4">
+                <ScrollArea className="overflow-y-auto max-h-[30vh] lg:max-h-[60vh]">
                   <div className="flex flex-col gap-2">
-                    {attackers.map((agent) => (
-                      <div key={agent.uuid} className="flex items-center gap-2 p-2 rounded-lg border border-gray-200" style={{ background: `${agent.backgroundGradientColors ? `linear-gradient(to right, ${agent.backgroundGradientColors[0]}, ${agent.backgroundGradientColors[1]})` : 'none'}` }}>
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={agent.displayIcon} alt={agent.displayName} />
-                          <AvatarFallback>{agent.displayName.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex flex-col">
-                          <span>{agent.displayName}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {agent.role.displayName}
-                          </span>
+                    {attackers.length === 0 ? (
+                      <div className="text-center py-6 text-white/70 italic">No agents selected</div>
+                    ) : (
+                      attackers.map((agent) => (
+                        <div 
+                          key={agent.uuid} 
+                          className="flex items-center gap-2 p-2 rounded-lg border border-gray-700 bg-black/30 transition-all duration-200 hover:bg-black/50" 
+                          style={{ 
+                            background: `linear-gradient(to right, rgba(0,0,0,0.7), rgba(0,0,0,0.4)), ${agent.backgroundGradientColors ? `linear-gradient(to right, ${agent.backgroundGradientColors[0]}40, ${agent.backgroundGradientColors[1]}40)` : 'none'}` 
+                          }}
+                        >
+                          <Avatar className="h-6 w-6 sm:h-8 sm:w-8 border border-gray-600">
+                            <AvatarImage src={agent.displayIcon} alt={agent.displayName} />
+                            <AvatarFallback>{agent.displayName.charAt(0)}</AvatarFallback>
+                          </Avatar>
+                          <div className="flex flex-col">
+                            <span className="text-sm text-white">{agent.displayName}</span>
+                            <span className="text-xs text-white/70">
+                              {agent.role.displayName}
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))
+                    )}
                   </div>
                 </ScrollArea>
               </CardContent>
             </Card>
 
             {/* Main Chat Area */}
-            <Card className="h-[700px] w-full">
+            <Card className="h-full w-full flex flex-1 flex-col bg-black/40 backdrop-blur-md border border-gray-800 shadow-lg lg:w-[calc(100%-520px)] xl:w-[calc(100%-620px)]">
               
-              <ScrollArea className="p-4 h-[650px] overflow-y-auto">
-                <div className="space-y-4">
+              <ScrollArea className="p-2 sm:p-4 h-[60vh] sm:h-[65vh] md:h-[70vh] overflow-y-auto">
+                <div className="space-y-3 sm:space-y-4">
+
+                  {chatMessages.length === 0 && !isLoadingChat && (
+                    <div className="flex items-center justify-center h-full py-10">
+                      <div className="text-center text-white/70 p-8">
+                        <h3 className="text-lg font-semibold mb-2">Ready for your strategy</h3>
+                        <p className="text-sm max-w-md">Select your team composition and map, then ask for strategy advice below.</p>
+                      </div>
+                    </div>
+                  )}
 
                   {chatMessages.map((message, i) => (
                     <div
@@ -247,7 +332,7 @@ function StratsContent() {
 
                       {/* Message container */}
                       <div
-                        className={`p-3 rounded-lg max-w-[80%] ${
+                        className={`p-2 sm:p-3 rounded-lg max-w-[95%] sm:max-w-[85%] md:max-w-[75%] text-sm animate-fadeIn ${
                           message.role === "user"
                             ? "bg-primary text-primary-foreground"
                             : message.role === "error"
@@ -258,13 +343,13 @@ function StratsContent() {
                             ? "bg-green-100 text-green-800 text-xs font-mono"
                             : message.role === "tool_call"
                             ? "bg-muted text-muted-foreground text-xs italic"
-                            : "bg-muted text-muted-foreground"
+                            : "bg-white/90 text-gray-900"
                         }`}
                       >
 
                         {/* Message content */}
                         {!message.function_call && (
-                          <div className={`${message.role === "user" ? "text-white" : "text-black"}`}>
+                          <div className="text-sm">
                             <Markdown>{message.content}</Markdown>
                           </div>
                         )}
@@ -280,7 +365,7 @@ function StratsContent() {
                         {message.function_call && (
                           <div className="mt-2 text-xs bg-background text-background-foreground p-2 rounded">
                             <p>Function: {message.function_call.name}</p>
-                            <pre className="whitespace-pre-wrap">
+                            <pre className="whitespace-pre-wrap overflow-x-auto text-xs">
                               {JSON.stringify(message.function_call.arguments, null, 2)}
                             </pre>
                           </div>
@@ -291,7 +376,7 @@ function StratsContent() {
                           <div className="mt-2 text-xs bg-background text-background-foreground p-2 rounded">
                             <p>Tool: {message.tool_info.name}</p>
                             {message.phase === "start" && (
-                              <pre className="whitespace-pre-wrap">
+                              <pre className="whitespace-pre-wrap overflow-x-auto text-xs">
                                 {JSON.stringify(message.tool_info.arguments, null, 2)}
                               </pre>
                             )}
@@ -304,8 +389,9 @@ function StratsContent() {
 
                   {isLoadingChat && (
                     <div className="flex items-start">
-                      <div className="p-3 rounded-lg bg-muted text-muted-foreground max-w-[80%]">
+                      <div className="p-3 rounded-lg bg-white/90 text-gray-900 max-w-[80%] flex items-center gap-2">
                         <Loader2 className="w-4 h-4 animate-spin" />
+                        <span className="text-sm">Generating strategy...</span>
                       </div>
                     </div>
                   )}
@@ -313,45 +399,115 @@ function StratsContent() {
                 </div>
               </ScrollArea>
 
-              <form onSubmit={handleSendMessage} className="p-4 border-t flex gap-2">
+              <form onSubmit={handleSendMessage} className="p-2 sm:p-4 border-t border-gray-700 flex gap-2 mt-auto">
                 <Input
                   placeholder="Type your message here..."
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  className="flex-1"
+                  className="flex-1 bg-white/10 border-gray-700 placeholder:text-white/50 text-white"
                 />
-                <Button type="submit">Send</Button>
+                <Button 
+                  type="submit" 
+                  size="sm" 
+                  className="sm:size-default bg-white/90 text-black hover:bg-white"
+                  disabled={isLoadingChat || (!map && attackers.length === 0 && defenders.length === 0)}
+                >
+                  Send
+                </Button>
               </form>
             </Card>
 
-            {/* Right Sidebar - Defender Team */}
-            <Card className="h-[700px] w-[350px] shrink-0">
-              <div className="border-b flex justify-between items-center px-6 py-4 pr-4">
-                <CardHeader>
-                  <CardTitle>Defender Team</CardTitle>
+            {/* MOBILE: Right Sidebar - Defender Team */}
+            <div className="lg:hidden">
+              <Sheet open={openDefenders} onOpenChange={setOpenDefenders}>
+                <SheetTrigger asChild>
+                  <Button variant="outline" className="w-full bg-black/50 backdrop-blur-md border border-gray-700 text-white">
+                    <Users className="mr-2 h-4 w-4" />
+                    Defenders ({defenders.length}/5)
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="right" className="bg-black/90 backdrop-blur-md border-gray-800 text-white">
+                  <SheetHeader>
+                    <SheetTitle className="text-white">Defender Team</SheetTitle>
+                  </SheetHeader>
+                  <div className="py-4">
+                    <Button size="sm" variant="outline" onClick={() => {
+                      setIsTeamModalOpen(true);
+                      setOpenDefenders(false);
+                    }} className="bg-white/10 text-white hover:bg-white/20 border-gray-600 mb-4">
+                      Select Team
+                    </Button>
+                    <ScrollArea className="h-[70vh]">
+                      <div className="flex flex-col gap-2">
+                        {defenders.length === 0 ? (
+                          <div className="text-center py-6 text-white/70 italic">No agents selected</div>
+                        ) : (
+                          defenders.map((agent) => (
+                            <div 
+                              key={agent.uuid} 
+                              className="flex items-center gap-2 p-2 rounded-lg border border-gray-700 bg-black/30 transition-all duration-200 hover:bg-black/50" 
+                              style={{ 
+                                background: `linear-gradient(to right, rgba(0,0,0,0.7), rgba(0,0,0,0.4)), ${agent.backgroundGradientColors ? `linear-gradient(to right, ${agent.backgroundGradientColors[0]}40, ${agent.backgroundGradientColors[1]}40)` : 'none'}` 
+                              }}
+                            >
+                              <Avatar className="h-8 w-8 border border-gray-600">
+                                <AvatarImage src={agent.displayIcon} alt={agent.displayName} />
+                                <AvatarFallback>{agent.displayName.charAt(0)}</AvatarFallback>
+                              </Avatar>
+                              <div className="flex flex-col">
+                                <span className="text-sm text-white">{agent.displayName}</span>
+                                <span className="text-xs text-white/70">
+                                  {agent?.role?.displayName}
+                                </span>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </div>
+                </SheetContent>
+              </Sheet>
+            </div>
+
+            {/* DESKTOP: Right Sidebar - Defender Team */}
+            <Card className="hidden lg:block lg:max-w-[250px] xl:max-w-[300px] lg:shrink-0 bg-black/40 backdrop-blur-md border border-gray-800 shadow-lg transition-all duration-300 hover:shadow-xl">
+              <div className="border-b border-gray-700 flex justify-between items-center px-3 sm:px-6 py-3 sm:py-4 pr-2 sm:pr-4">
+                <CardHeader className="p-0 sm:p-1">
+                  <CardTitle className="text-base sm:text-lg text-white">Defender Team</CardTitle>
                 </CardHeader>
-                <Button variant="outline" onClick={() => setIsTeamModalOpen(true)}>
-                  Select Team
+                <Button size="sm" variant="outline" onClick={() => setIsTeamModalOpen(true)} className="bg-white/10 text-white hover:bg-white/20 border-gray-600">
+                  Select
                 </Button>
               </div>
 
-              <CardContent>
-                <ScrollArea className="h-[500px] overflow-y-auto">
+              <CardContent className="p-2 sm:p-4">
+                <ScrollArea className="overflow-y-auto max-h-[30vh] lg:max-h-[60vh]">
                   <div className="flex flex-col gap-2">
-                    {defenders.map((agent) => (
-                      <div key={agent.uuid} className="flex items-center gap-2 p-2 rounded-lg border border-gray-200">
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={agent.displayIcon} alt={agent.displayName} />
-                          <AvatarFallback>{agent.displayName.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex flex-col">
-                          <span>{agent.displayName}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {agent?.role?.displayName}
-                          </span>
+                    {defenders.length === 0 ? (
+                      <div className="text-center py-6 text-white/70 italic">No agents selected</div>
+                    ) : (
+                      defenders.map((agent) => (
+                        <div 
+                          key={agent.uuid} 
+                          className="flex items-center gap-2 p-2 rounded-lg border border-gray-700 bg-black/30 transition-all duration-200 hover:bg-black/50"
+                          style={{ 
+                            background: `linear-gradient(to right, rgba(0,0,0,0.7), rgba(0,0,0,0.4)), ${agent.backgroundGradientColors ? `linear-gradient(to right, ${agent.backgroundGradientColors[0]}40, ${agent.backgroundGradientColors[1]}40)` : 'none'}` 
+                          }}
+                        >
+                          <Avatar className="h-6 w-6 sm:h-8 sm:w-8 border border-gray-600">
+                            <AvatarImage src={agent.displayIcon} alt={agent.displayName} />
+                            <AvatarFallback>{agent.displayName.charAt(0)}</AvatarFallback>
+                          </Avatar>
+                          <div className="flex flex-col">
+                            <span className="text-sm text-white">{agent.displayName}</span>
+                            <span className="text-xs text-white/70">
+                              {agent?.role?.displayName}
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))
+                    )}
                   </div>
                 </ScrollArea>
               </CardContent>

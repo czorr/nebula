@@ -41,31 +41,31 @@ export default function TeamSelectionModal({ isOpen, onClose, agents }) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[60vw] min-w-[60vw] max-h-[90vh] rounded-2xl">
+      <DialogContent className="max-w-[95vw] sm:max-w-[90vw] md:max-w-[80vw] lg:max-w-[70vw] xl:max-w-[60vw] max-h-[90vh] rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-6">
         <DialogHeader>
-          <DialogTitle>Select Team Compositions</DialogTitle>
+          <DialogTitle className="text-lg sm:text-xl">Select Team Compositions</DialogTitle>
         </DialogHeader>
         
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3 sm:gap-4">
           {/* Attackers */}
           <div>
-            <h3 className="font-bold mb-2">Attackers ({selectedAttackers.length}/5)</h3>
-            <ScrollArea className="border rounded-lg p-4">
-              <div className="grid grid-cols-7 gap-2">
+            <h3 className="font-bold mb-1 sm:mb-2">Attackers ({selectedAttackers.length}/5)</h3>
+            <ScrollArea className="border rounded-lg p-2 sm:p-4 h-[20vh] sm:h-[25vh]">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-2">
                 {agents.map((agent) => (
                   <div
                     key={agent.uuid}
                     onClick={() => handleAgentSelection(agent, 'attackers')}
-                    className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer hover:bg-gray-200 active:scale-95 transition-all duration-200
+                    className={`flex items-center gap-1 sm:gap-2 p-1 sm:p-2 rounded-lg cursor-pointer hover:bg-gray-200 active:scale-95 transition-all duration-200
                       ${selectedAttackers.find(a => a.uuid === agent.uuid) ? 'bg-primary/20' : ''}`}
                   >
-                    <Avatar className="rounded-lg border border-gray-200">
+                    <Avatar className="h-8 w-8 rounded-lg border border-gray-200">
                       <AvatarImage src={agent.displayIcon} alt={agent.displayName} />
                       <AvatarFallback>{agent.displayName.substring(0, 2)}</AvatarFallback>
                     </Avatar>
                     <div className="flex flex-col">
-                      <span className="text-sm font-semibold">{agent.displayName}</span>
-                      <span className="text-xs text-muted-foreground">{agent?.role?.displayName}</span>
+                      <span className="text-xs sm:text-sm font-semibold">{agent.displayName}</span>
+                      <span className="text-xs text-muted-foreground hidden sm:block">{agent?.role?.displayName}</span>
                     </div>
                   </div>
                 ))}
@@ -75,23 +75,23 @@ export default function TeamSelectionModal({ isOpen, onClose, agents }) {
 
           {/* Defenders */}
           <div>
-            <h3 className="font-bold mb-2">Defenders ({selectedDefenders.length}/5)</h3>
-            <ScrollArea className="border rounded-lg p-4">
-              <div className="grid grid-cols-7 gap-2">
+            <h3 className="font-bold mb-1 sm:mb-2">Defenders ({selectedDefenders.length}/5)</h3>
+            <ScrollArea className="border rounded-lg p-2 sm:p-4 h-[20vh] sm:h-[25vh]">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-2">
                 {agents.map((agent) => (
                   <div
                     key={agent.uuid}
                     onClick={() => handleAgentSelection(agent, 'defenders')}
-                    className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer hover:bg-gray-200 active:scale-95 transition-all duration-200
+                    className={`flex items-center gap-1 sm:gap-2 p-1 sm:p-2 rounded-lg cursor-pointer hover:bg-gray-200 active:scale-95 transition-all duration-200
                       ${selectedDefenders.find(a => a.uuid === agent.uuid) ? 'bg-primary/20' : ''}`}
                   >
-                    <Avatar className="rounded-lg border border-gray-200">
+                    <Avatar className="h-8 w-8 rounded-lg border border-gray-200">
                       <AvatarImage src={agent.displayIcon} alt={agent.displayName} />
                       <AvatarFallback>{agent.displayName.substring(0, 2)}</AvatarFallback>
                     </Avatar>
                     <div className="flex flex-col">
-                      <span className="text-sm font-semibold">{agent.displayName}</span>
-                      <span className="text-xs text-muted-foreground">{agent?.role?.displayName}</span>
+                      <span className="text-xs sm:text-sm font-semibold">{agent.displayName}</span>
+                      <span className="text-xs text-muted-foreground hidden sm:block">{agent?.role?.displayName}</span>
                     </div>
                   </div>
                 ))}
@@ -100,10 +100,15 @@ export default function TeamSelectionModal({ isOpen, onClose, agents }) {
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button variant="outline" onClick={onClose} size="sm" className="sm:size-default">
+            Cancel
+          </Button>
           <Button
             onClick={handleSave}
             disabled={selectedAttackers.length !== 5 || selectedDefenders.length !== 5}
+            size="sm"
+            className="sm:size-default"
           >
             Save Compositions
           </Button>
