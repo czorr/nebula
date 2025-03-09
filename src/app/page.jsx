@@ -13,9 +13,9 @@ import TeamSelectionModal from "@/components/modals/TeamSelection";
 import MapSelectionModal from "@/components/modals/MapSelection";
 import { resetMap } from "@/app/redux/features/maps";
 import { addMessage, setLoading, setError } from './redux/features/chat.js';
-import { Loader2, ChevronRight, ChevronLeft, Users } from "lucide-react";
+import { Loader2, Users } from "lucide-react";
 import Markdown from 'react-markdown';
-import Image from "next/image";
+
 function StratsContent() {
 
   const dispatch = useDispatch(); 
@@ -317,9 +317,9 @@ function StratsContent() {
                   {chatMessages.length === 0 && !isLoadingChat && (
                     <div className="flex items-center justify-center h-full py-10">
                       <div className="flex flex-col gap-2 h-full items-center justify-center text-center text-white/70 p-8">
-                        <img src="https://media1.giphy.com/media/HuIiWZekURnZzBMAXK/source.gif" alt="Valorant Jett sticker thinking about strategy" width={200} height={200} />
+                        <img src="https://media1.giphy.com/media/HuIiWZekURnZzBMAXK/source.gif" alt="Valorant Jett sticker thinking about strategy" width={200} height={200} className="opacity-50 hover:opacity-100 transition-all duration-300"/>
                         <h3 className="text-lg font-semibold mb-2">Ready for your strategy</h3>
-                        <p className="text-sm max-w-md">Select your team composition and map, then ask for strategy advice below.</p>
+                        <p className="text-sm max-w-md">{attackers.length === 0 && defenders.length === 0 && !map ? 'Select your team and map to get started.' : 'Great! Now ask for strategy advice below.'}</p>
                       </div>
                     </div>
                   )}
@@ -409,9 +409,10 @@ function StratsContent() {
                 </div>
               </ScrollArea>
 
+              {/* Chat input */}
               <form onSubmit={handleSendMessage} className="p-2 sm:p-4 border-t border-gray-700 flex gap-2 mt-auto">
                 <Input
-                  placeholder="Type your message here..."
+                  placeholder="Type your strat here..."
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   className="flex-1 bg-white/10 border-gray-700 placeholder:text-white/50 text-white"
