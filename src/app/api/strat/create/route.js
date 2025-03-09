@@ -1,14 +1,8 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { Langfuse } from "langfuse";
 import { observeOpenAI } from 'langfuse';
 import { getAgentsTool, getMapsTool, suggestPlacementsTool, getCalloutsTool, finishTaskTool } from '@/lib/agents/tools';
-
-const langfuse = new Langfuse({
-  secretKey: process.env.LANGFUSE_SECRET_KEY,
-  publicKey: process.env.LANGFUSE_PUBLIC_KEY,
-  baseUrl: process.env.LANGFUSE_BASE_URL
-});
+import { getStratPrompt } from '@/lib/agents/prompts';
 
 const openai = observeOpenAI(new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -50,24 +44,11 @@ export async function POST(request) {
       contextInfo += `Defending Team: ${mapAgentsInfo(defenders)}\n`;
     }
 
-    console.log(contextInfo);
-
-    // Prepare the messages for OpenAI
+    //! Prepare the messages
     const messages = [
       {
         role: "system",
-        content: `You are a Valorant strategy expert who helps players create and optimize game plans. 
-        You can use tools to access agent information, map details, and suggest optimal placements.
-        Always think step by step and explain your reasoning. Be specific about agent abilities and map callouts.
-        You can use the tools to get information about agents and maps.
-        You can use the tools to suggest optimal placements for the attacking and defending team.
-        The attacking team is the team that is trying to plant the spike and the defending team is the team that is trying to prevent them from doing so.
-        Your goal is to give the macro strategy for the attacking and defending team.
-        And select the best agents for counter-strategies of the opposing team.
-        The selection of agents can create micro strategies based on their abilities sinergy.
-        DONT GIVE CONCEPTUAL INSTRUCTIONS LIKE "IDENTIFY WEAK POINTS" OR "CARE OF ABILITIES" YOU NEED TO BE SPECIFIC AND CONCRETE BUT EXTENSIVE.
-        
-        ${contextInfo}`
+        content: getStratPrompt(contextInfo) // Get the prompt with the context
       },
       ...filteredMessageHistory,
       {
@@ -110,6 +91,7 @@ export async function POST(request) {
 
           if (functionName === "getAgents") {
             // Fetch agents data
+
             const agentsResponse = await fetch(new URL("/api/agents", request.url));
             const agentsData = await agentsResponse.json();
             toolResults.push({
@@ -121,6 +103,7 @@ export async function POST(request) {
           } 
           else if (functionName === "getMaps") {
             // Fetch maps data
+
             const mapsResponse = await fetch(new URL("/api/maps", request.url));
             const mapsData = await mapsResponse.json();
             toolResults.push({
@@ -154,6 +137,7 @@ export async function POST(request) {
           }
           else if (functionName === "getCallouts") {
             // Fetch callouts data
+
             const calloutsResponse = await fetch(new URL("/api/callouts", request.url));
             const calloutsData = await calloutsResponse.json();
             toolResults.push({
@@ -165,6 +149,7 @@ export async function POST(request) {
           }
           else if (functionName === "finishTask") {
             // The model has explicitly decided its done
+
             finalAssistantMessage = {
               role: "assistant",
               content: functionArgs.finalAnswer || "Task completed successfully."
@@ -176,6 +161,7 @@ export async function POST(request) {
 
         // If the model explicitly finished, break the loop
         if (finalAssistantMessage) {
+          dispatch(setAgentStatus("Task completed successfully."));
           break;
         }
 
