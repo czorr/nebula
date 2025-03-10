@@ -41,6 +41,13 @@ El unico feature es un agente conversacional que puede realizar distintas consul
 - getCallouts [params: mapId]: Obtiene los nombres de las zonas del mapa con su respectivo site (A, B, C)
 - finishTask: Break agent loop
 
+![nebula-app-chat-agent](./src/static/images/app1.png "Nebula App")
+
+El agente usa el modelo 4o-mini de OpenAI con un observer de Langfuse para el tracking de los traces y pricing.
+El unico eval configurado son Hallucinations, de tampoco tiene una configuracion tan extensa, simplemente el template de Langfuse con 2-3 tweaks para Valorant.
+
+![langfuse-trace](./src/static/images/langfuse1.png "Langfuse Trace")
+
 ### Libraries
 - **Next.js (App Router)**: Maneja la estructura y las API Routes.
 - **TanStack Query**: Se utilizan hooks (useQuery) para obtener datos de la API.
@@ -48,6 +55,7 @@ El unico feature es un agente conversacional que puede realizar distintas consul
 - **shadcn UI**: Componentes visuales.
 - **API Valorant**: Se consume a través de una API Route.
 - **Langfuse**: Evals and logging
+- [Pendiente] DeepEval (non-js)
 
 ### Que mejoraria si tuviera mas tiempo
 - Tools se muestran al momento de ser utilizadas por el agente (por desconocimiento del server component no lo hice)
@@ -76,4 +84,64 @@ El unico feature es un agente conversacional que puede realizar distintas consul
 - **Langfuse**
     - https://us.cloud.langfuse.com/project/cm8154yf2001pad072l3c32yt
     - https://www.youtube.com/watch?v=2E8iTvGo9Hs
+
+### Instalación
+
+Para instalar y ejecutar Nebula en tu entorno local, sigue estos pasos:
+
+1. **Clona el repositorio**
+   ```bash
+   git clone https://github.com/czorr/nebula.git
+   cd nebula
+   ```
+
+2. **Instala las dependencias**
+   ```bash
+   npm install
+   # o
+   yarn install
+   # o
+   pnpm install
+   ```
+
+3. **Configura las variables de entorno**
+   Crea un archivo `.env.local` en la raíz del proyecto con las siguientes variables:
+   ```
+    OPENAI_API_KEY=sk...
+
+    MAX_ITERATIONS=10
+
+    LANGFUSE_SECRET_KEY=sk...
+    LANGFUSE_PUBLIC_KEY=pk...
+    LANGFUSE_BASEURL=https://us.cloud.langfuse.com
+   ```
+
+4. **Ejecuta la aplicación en modo desarrollo**
+   ```bash
+   npm run dev
+   # o
+   yarn dev
+   # o
+   pnpm dev
+   ```
+
+5. **Accede a la aplicación**
+   Abre tu navegador y visita `http://localhost:3000`
+
+### Comandos adicionales
+
+```bash
+# Construir la aplicación para producción
+npm run build
+
+# Ejecutar la aplicación en producción
+npm start
+
+# Ejecutar linter
+npm run lint
+```
+
+### Requisitos
+- Node.js 18.x o superior
+- npm, yarn o pnpm
 
