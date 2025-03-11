@@ -1,10 +1,17 @@
 import { NextResponse } from "next/server";
 
 export async function GET() {
-  // Realizamos el fetch a la API externa de Valorant
-  const res = await fetch("https://valorant-api.com/v1/agents");
-  const data = await res.json();
+  try {
+    // Fetch Valorant API
+    const res = await fetch("https://valorant-api.com/v1/agents");
+    const data = await res.json();
 
-  // Retornamos los datos en formato JSON
-  return NextResponse.json(data);
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error("Error al obtener datos de agentes:", error);
+    return NextResponse.json(
+      { error: "Error al obtener datos de agentes" },
+      { status: 500 }
+    );
+  }
 }
