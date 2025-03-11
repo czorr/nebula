@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { observeOpenAI, Langfuse } from 'langfuse';
-import { getAgentsTool, suggestPlacementsTool, getCalloutsTool, finishTaskTool } from '@/lib/agents/tools';
-import { getStratPrompt } from '@/lib/agents/prompts';
+import { getAgentsTool, suggestPlacementsTool, getCalloutsTool, finishTaskTool } from '../../../../lib/agents/tools';
+import { getStratPrompt } from '../../../../lib/agents/prompts';
 import { v4 as uuidv4 } from 'uuid';
 
 // Initialize Langfuse
@@ -218,7 +218,7 @@ export async function POST(request) {
         content: "I've analyzed your request using the available tools. Here's my strategy..."
       };
 
-      // Return the final response with all tool calls //! (idk if 'NextResponse' is always needed - Ask Heber)
+      // Return the final response with all tool calls
       return NextResponse.json({
         message: finalMessage,
         toolCalls: allToolCalls.map((tool, index) => {
@@ -228,7 +228,7 @@ export async function POST(request) {
               name: tool.function.name,
               arguments: JSON.parse(tool.function.arguments),
               phase: "contributing", // Indicates that this tool contributed to the response
-              order: index // Add index to maintain order
+              order: index
             };
           } else if (tool.function && tool.function.name === "finishTask") {
             return {
