@@ -84,6 +84,10 @@ El unico eval configurado son Hallucinations, de tampoco tiene una configuracion
 - **Langfuse**
     - https://us.cloud.langfuse.com/project/cm8154yf2001pad072l3c32yt
     - https://www.youtube.com/watch?v=2E8iTvGo9Hs
+- **Vitest**
+    - https://vitest.dev/api/
+    - https://vitest.dev/api/mock.html
+    - https://www.youtube.com/watch?v=CxSL0knFxAs
 
 ### Instalación
 
