@@ -1,10 +1,18 @@
 import { NextResponse } from "next/server";
 
 export async function GET() {
-  // Realizamos el fetch a la API externa de Valorant
-  const res = await fetch("https://valorant-api.com/v1/maps");
-  const data = await res.json();
+  try {
+    // Fetch
+    const res = await fetch("https://valorant-api.com/v1/maps");
+    const data = await res.json();
 
-  // Retornamos los datos en formato JSON
-  return NextResponse.json(data);
+    // Return
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error('Error al obtener datos de maps:', error);
+    return NextResponse.json(
+      { error: 'Error al obtener datos de maps' },
+      { status: 500 }
+    );
+  }
 }
