@@ -3,10 +3,24 @@ import { NextResponse } from "next/server";
 export async function GET(request) {
   const mapId = request.nextUrl.searchParams.get("mapId");
 
-  // Realizamos el fetch a la API externa de Valorant
-  const res = await fetch(`https://valorant-api.com/v1/maps/${mapId}`);
-  const data = await res.json();
+  if (!mapId) {
+    return NextResponse.json(
+      { error: 'No se proporcionó un mapId' },
+      { status: 400 }
+    );
+  }
+  try {
+    // Fetch
+    const res = await fetch(`https://valorant-api.com/v1/maps/${mapId}`);
+    const data = await res.json();
 
-  // Retornamos los datos en formato JSON
-  return NextResponse.json(data);
+    // Return
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error('Error al obtener datos de callouts:', error);
+    return NextResponse.json(
+      { error: 'Error al obtener datos de callouts' },
+      { status: 500 }
+    );
+  }
 }
