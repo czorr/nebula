@@ -1,4 +1,4 @@
-# Nebula App - [SealsAI]
+# Nebula App
 
 ### Contexto
 Valorant es un videojuego multijugador 5v5 basado en estrategia, disparos y habilidades, para PC y consolas.
